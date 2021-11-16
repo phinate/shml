@@ -21,8 +21,10 @@ This module aims to provide a set of functions that, when composed, can run a pi
 - access event data that's prepared for `pytorch` using `shml.torch_dataset.EventDataset`
 
 still to do:
-
 - infra to run ml experiments in a GPU or CPU environment via `pytorch-lightining`
+
+## Usage
+To see currently usable implemented functionality, check the [`examples`](examples) folder.
 
 ## Install
 For preprocessing only:
