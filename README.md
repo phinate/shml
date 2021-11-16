@@ -11,9 +11,28 @@
 [![GitHub Discussion][github-discussions-badge]][github-discussions-link]
 [![Gitter][gitter-badge]][gitter-link]
 
+# `shml`: routines to automate machine learning experiments for a X -> SH -> bbyy search
 
+This module aims to provide a set of functions that, when composed, can run a pipeline capable of:
+- going from `.root` files to `parquet` files via `uproot` and `awkward`
+- constructing useful kinematic quantites for training
+- applying a chosen or manual preselection
+- configuring any additional processing, e.g. weight normalization, feature scaling
+- access event data that's prepared for `pytorch` using `shml.torch_dataset.EventDataset`
 
+still to do:
 
+- infra to run ml experiments in a GPU or CPU environment via `pytorch-lightining`
+
+## Install
+For preprocessing only:
+```
+python3 -m pip install shml
+```
+For ML extras:
+```
+python3 -m pip install shml[ml]
+```
 [actions-badge]:            https://github.com/phinate/shml/workflows/CI/badge.svg
 [actions-link]:             https://github.com/phinate/shml/actions
 [black-badge]:              https://img.shields.io/badge/code%20style-black-000000.svg
