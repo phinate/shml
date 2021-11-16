@@ -29,7 +29,7 @@ For preprocessing only:
 ```
 python3 -m pip install shml
 ```
-For ML extras:
+For ML extras (`pytorch`, plotting):
 ```
 python3 -m pip install shml[ml]
 ```
