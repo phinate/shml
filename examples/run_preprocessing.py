@@ -11,33 +11,10 @@ import uproot
 
 import shml
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--outdir",
-        help="Choose the directory to write the output files to.",
-    )
-    parser.add_argument(
-        "--preselection-type",
-        help="Specify the type of preselection you'd like to use.",
-        default="loose",
-    )
 
-    args = parser.parse_args()
-    cut_type = args.preselection_type
-    writeout_dir = args.outdir
-
+def initial(writeout_dir: str, filepath: str, cut_type: str) -> ak.Array:
     print(f"running preprocessing with {cut_type} preselection")
-
-    with open("filepath") as f:
-        filepath = f.readline().strip("\n")
-
     filenames = list(filter(lambda item: "root" in item, os.listdir(filepath)))
-    signal_files = tuple(filter(lambda item: item[0] == "X", filenames))
-    background_files = tuple(
-        filter(lambda item: item not in signal_files, filenames),
-    )
-
     filenames.remove("yyjj.root")
 
     allarrs = []
@@ -98,7 +75,8 @@ if __name__ == "__main__":
         for i in range(176 + 1)
     ]
     outfile = os.path.join(writeout_dir, "preprocessed_data.parquet")
-    ak.to_parquet(ak.concatenate(b + [a]), outfile)
+    array = ak.concatenate(b + [a])
+    ak.to_parquet(array, outfile)
     print("done!")
     print(f"preprocessed data written out to {outfile}")
     print("cleaning up...", end=" ")
@@ -111,14 +89,14 @@ if __name__ == "__main__":
         )
     os.remove(os.path.join(writeout_dir, "without_yyjj.parquet"))
     print("done!")
+    return array
 
+
+def weight(arrs: ak.Array, writeout_dir: str, filepath: str, cut_type: str) -> ak.Array:
     print("performing weight normalization...")
     # weight normalization per-category
     filenames = list(filter(lambda item: "root" in item, os.listdir(filepath)))
     signal_files = tuple(filter(lambda item: item[0] == "X", filenames))
-    background_files = tuple(
-        filter(lambda item: item not in signal_files, filenames),
-    )
 
     list_of_arrs = []
     for file in signal_files:
@@ -143,6 +121,12 @@ if __name__ == "__main__":
         ),
     )
     print("done!")
+    return all_normed
+
+
+def split(
+    all_normed: ak.Array, writeout_dir: str, filepath: str, cut_type: str
+) -> ak.Array:
     print("performing train/test split...")
     train_mask = all_normed["EventNumber"] % 4 <= 1
     test_mask = all_normed["EventNumber"] % 4 == 2
@@ -165,7 +149,14 @@ if __name__ == "__main__":
     print(
         f"files written to {writeout_dir}/train.parquet, {writeout_dir}/test.parquet",
     )
+    return train
+
+
+def cfg(train: ak.Array, writeout_dir: str, filepath: str, cut_type: str) -> ak.Array:
+
     print("getting relative signal proportions from training data...")
+    filenames = list(filter(lambda item: "root" in item, os.listdir(filepath)))
+    signal_files = tuple(filter(lambda item: item[0] == "X", filenames))
     prop_dict = {}
     for name in signal_files:
         prop_dict[name] = len(train[train["filename"] == name])
@@ -195,3 +186,52 @@ if __name__ == "__main__":
         f.write(json.dumps(config))
     print("done!")
     print("have a good rest of your day! ^_^")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--outdir",
+        help="Choose the directory to write the output files to.",
+    )
+    parser.add_argument(
+        "--rootpath",
+        help="Specify the directory of the .root files you want to convert.",
+        default="/eos/user/h/hhsukth/GroupSpace/MiniTree/h027/",
+    )
+    parser.add_argument(
+        "--preselection-type",
+        help="Specify the type of preselection you'd like to use.",
+        default="loose",
+    )
+    parser.add_argument(
+        "--entrypoint",
+        help="Run from this step!",
+        default="start",
+    )
+    parser.add_argument(
+        "--entrypath",
+        help="Start from this file in --outdir!",
+    )
+
+    args = parser.parse_args()
+    cut_type = args.preselection_type
+    writeout_dir = args.outdir
+    filepath = args.rootpath
+    entry = args.entrypoint
+    current_file = os.path.join(writeout_dir, args.entrypath)
+    all_args = (writeout_dir, filepath, cut_type)
+
+    if entry == "start":
+        cfg(split(weight(initial(*all_args), *all_args), *all_args), *all_args)
+    elif entry == "weight":
+        cfg(
+            split(weight(ak.from_parquet(current_file), *all_args), *all_args),
+            *all_args,
+        )
+    elif entry == "split":
+        cfg(split(ak.from_parquet(current_file), *all_args), *all_args)
+    elif entry == "config":
+        cfg(ak.from_parquet(current_file), *all_args)
+    else:
+        print("doing nothing!")
