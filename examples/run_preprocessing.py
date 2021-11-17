@@ -209,29 +209,40 @@ if __name__ == "__main__":
         help="Run from this step!",
         default="start",
     )
-    parser.add_argument(
-        "--entrypath",
-        help="Start from this file in --outdir!",
-    )
 
     args = parser.parse_args()
     cut_type = args.preselection_type
     writeout_dir = args.outdir
     filepath = args.rootpath
     entry = args.entrypoint
-    current_file = os.path.join(writeout_dir, args.entrypath)
     all_args = (writeout_dir, filepath, cut_type)
 
     if entry == "start":
         cfg(split(weight(initial(*all_args), *all_args), *all_args), *all_args)
     elif entry == "weight":
         cfg(
-            split(weight(ak.from_parquet(current_file), *all_args), *all_args),
+            split(
+                weight(
+                    ak.from_parquet(
+                        os.path.join(writeout_dir, "preprocessed_data.parquet")
+                    ),
+                    *all_args,
+                ),
+                *all_args,
+            ),
             *all_args,
         )
     elif entry == "split":
-        cfg(split(ak.from_parquet(current_file), *all_args), *all_args)
+        cfg(
+            split(
+                ak.from_parquet(
+                    os.path.join(writeout_dir, "all_data_normed_weights.parquet")
+                ),
+                *all_args,
+            ),
+            *all_args,
+        )
     elif entry == "config":
-        cfg(ak.from_parquet(current_file), *all_args)
+        cfg(ak.from_parquet(os.path.join(writeout_dir, "train.parquet")), *all_args)
     else:
         print("doing nothing!")
